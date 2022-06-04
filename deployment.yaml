@@ -1,0 +1,49 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sms-sender
+  name: sms-sender
+spec:
+  selector:
+    matchLabels:
+      app: sms-sender
+  replicas: 0
+  template:
+    metadata:
+      labels:
+        app: sms-sender
+    spec:
+      serviceAccountName: bigdata
+      containers:
+        - name: sms-sender
+          image: kapkiai/sms-sender:0.0.1
+          ports:
+            - containerPort: 8085
+          imagePullPolicy: Always
+          env:
+            - name: smppHost
+              value: localhost
+            - name: smppPort
+              value: 2775
+            - name: smppSystemId
+              value: smsc
+            - name: smppPassword
+              value: pass
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sms-sender
+spec:
+  type: LoadBalancer
+  ports:
+    - name: send-port
+      port: 8085
+      targetPort: 8085
+      protocol: TCP
+  selector:
+    app: sms-sender
+
+
