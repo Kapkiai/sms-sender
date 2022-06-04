@@ -38,7 +38,7 @@ public class SmppSession {
         try {
             session.connectAndBind(host, Integer.parseInt(port), bindParam);
         } catch (Exception e){
-            log.error("Failed to connect and bind to smsc {} due to {}", host, e);
+            log.error("Failed to connect and bind to smsc {} due to {}", host, e.getMessage());
         }
         return session;
     }
