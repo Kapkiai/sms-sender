@@ -14,7 +14,7 @@ public class SmppSessionBean {
 
     @Bean(name = "smscConnection")
     public SMPPSession getSession(){
-        SmppSession session = new  SmppSession(smppConfig.getSystemId(), smppConfig.getPassword(), smppConfig.getHost(), smppConfig.getPort());
+        SmppSession session = new  SmppSession(smppConfig.getSystemId(), smppConfig.getSmppPassword(), smppConfig.getHost(), smppConfig.getPort());
         return session.getSession();
     }
 }

@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.kapkiai.smpp</groupId>
 	<artifactId>sms-sender</artifactId>
-	<version>0.0.1</version>
+	<version>0.0.2</version>
 	<name>sms-sender</name>
 	<description>Application for sending sms</description>
 	<properties>
@@ -18,25 +18,25 @@
 		<jsmpp.version>2.3.11</jsmpp.version>
 		<jcharset.version>2.1</jcharset.version>
 	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter</artifactId>
+			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-			<version>2.7.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<optional>true</optional>
+			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>org.jsmpp</groupId>
@@ -47,6 +47,11 @@
 			<groupId>net.freeutils</groupId>
 			<artifactId>jcharset</artifactId>
 			<version>${jcharset.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.wnameless.spring</groupId>
+			<artifactId>spring-security-jjwt</artifactId>
+			<version>0.2.0</version>
 		</dependency>
 	</dependencies>
 

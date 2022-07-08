@@ -29,6 +29,7 @@ import org.jsmpp.extra.NegativeResponseException;
 import org.jsmpp.extra.ResponseTimeoutException;
 import org.jsmpp.session.SMPPSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import static com.kapkiai.smpp.utils.SmppUtils.getTotalSegmentsForTextMessage;
@@ -50,6 +51,7 @@ public class SendSms {
 //    @Qualifier("smscConnection")
     SmppSessionBean smppSessionBean;
 
+    @Async
     public String sendAndWait(final String smsMessage, final String number, final String senderLabel) throws IOException {
 
         // Use messageClass null to set a default message class
@@ -172,11 +174,12 @@ public class SendSms {
 
     private String submitMessage(SMPPSession session, byte[] message, String sourceMsisdn, String destinationMsisdn,
                                  DataCoding dataCoding, ESMClass esmClass) {
+        log.info("Sender Label {}", sourceMsisdn);
 
         String result = "";
 
         try {
-            result = session.submitShortMessage("CMT", TypeOfNumber.UNKNOWN, NumberingPlanIndicator.UNKNOWN,
+            result = session.submitShortMessage("CMT", TypeOfNumber.ALPHANUMERIC, NumberingPlanIndicator.UNKNOWN,
                     sourceMsisdn, TypeOfNumber.UNKNOWN, NumberingPlanIndicator.UNKNOWN, destinationMsisdn, esmClass,
                     (byte) 0, (byte) 1, null, null, new RegisteredDelivery(SMSCDeliveryReceipt.SUCCESS_FAILURE),
                     (byte) 0, dataCoding, (byte) 0, message);

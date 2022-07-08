@@ -9,7 +9,7 @@ spec:
   selector:
     matchLabels:
       app: sms-sender
-  replicas: 0
+  replicas: 1
   template:
     metadata:
       labels:
@@ -18,19 +18,19 @@ spec:
       serviceAccountName: bigdata
       containers:
         - name: sms-sender
-          image: kapkiai/sms-sender:0.0.1
+          image: docker.io/kapkiai/sms-sender:0.0.3
           ports:
             - containerPort: 8085
           imagePullPolicy: Always
           env:
             - name: smppHost
-              value: localhost
+              value: "10.33.14.33"
             - name: smppPort
-              value: 2775
+              value: "5016"
             - name: smppSystemId
-              value: smsc
+              value: "nifi"
             - name: smppPassword
-              value: pass
+              value: "N1F1"
 ---
 apiVersion: v1
 kind: Service

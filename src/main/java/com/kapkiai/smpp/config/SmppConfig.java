@@ -17,6 +17,6 @@ public class SmppConfig {
     @Value("${smppSystemId:smsc}")
     private String systemId;
     @Value("${smppPassword:smsc}")
-    private String password;
+    private String smppPassword;
 
 }

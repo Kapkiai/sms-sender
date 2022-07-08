@@ -29,12 +29,12 @@ public class SmppSession {
     @Bean
     public SMPPSession getSession() {
         log.info("CONNECTION DETAILS: Host= {}, port= {},system id=  {}",host, port, systemId);
-        BindParameter bindParam = new BindParameter(BindType.BIND_TRX, systemId, password, "tdd",
+        BindParameter bindParam = new BindParameter(BindType.BIND_TX, systemId, password, "tdd",
                 TypeOfNumber.UNKNOWN, NumberingPlanIndicator.UNKNOWN, null);
 
         SMPPSession session = new SMPPSession();
         session.addSessionStateListener(new SessionStateListenerImpl());
-        session.setMessageReceiverListener(new MessageReceiverListenerImpl());
+//        session.setMessageReceiverListener(new MessageReceiverListenerImpl());
         try {
             session.connectAndBind(host, Integer.parseInt(port), bindParam);
         } catch (Exception e){
