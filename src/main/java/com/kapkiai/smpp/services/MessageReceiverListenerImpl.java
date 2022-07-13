@@ -2,11 +2,7 @@ package com.kapkiai.smpp.services;
 
 import java.nio.charset.StandardCharsets;
 
-import org.jsmpp.bean.AlertNotification;
-import org.jsmpp.bean.DataSm;
-import org.jsmpp.bean.DeliverSm;
-import org.jsmpp.bean.DeliveryReceipt;
-import org.jsmpp.bean.OptionalParameter;
+import org.jsmpp.bean.*;
 import org.jsmpp.extra.ProcessRequestException;
 import org.jsmpp.session.DataSmResult;
 import org.jsmpp.session.MessageReceiverListener;
@@ -21,7 +17,7 @@ public class MessageReceiverListenerImpl implements MessageReceiverListener {
     public void onAcceptDeliverSm(final DeliverSm deliverSm)
             throws ProcessRequestException {
 
-        if (deliverSm.isSmscDeliveryReceipt()) {
+        if (MessageType.SMSC_DEL_RECEIPT.containedIn(deliverSm.getEsmClass())) {
 
             try {
                 final DeliveryReceipt delReceipt = deliverSm.getShortMessageAsDeliveryReceipt();
@@ -29,7 +25,19 @@ public class MessageReceiverListenerImpl implements MessageReceiverListener {
                 log.info("Received receipt: {} {}", delReceipt.getId(), delReceipt.getFinalStatus());
 
                 final String messageId = delReceipt.getId();
-                log.info("Message ID {}", messageId);
+                log.info("Receipt ID {}", messageId);
+
+                // lets cover the id to hex string format
+                long id = Long.parseLong(delReceipt.getId()) & 0xffffffff;
+                String mId = Long.toString(id, 16).toUpperCase();
+
+                /*
+                 * you can update the status of your submitted message on the
+                 * database based on messageId
+                 */
+
+                log.info("Receiving delivery receipt for message '{}' from {} to {}: {}",
+                        mId, deliverSm.getSourceAddr(), deliverSm.getDestAddress(), delReceipt);
 
             } catch (InvalidDeliveryReceiptException e) {
                 log.error("Failed getting delivery receipt", e);

@@ -12,7 +12,7 @@ logging:
       springframework:
         web:
           filter:
-            CommonsRequestLoggingFilter: INFO
+            CommonsRequestLoggingFilter: DEBUG
 
 jwt:
   private:

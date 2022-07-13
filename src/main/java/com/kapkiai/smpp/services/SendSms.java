@@ -5,6 +5,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
+import com.kapkiai.smpp.exception.FailedToSubmitMessageException;
+import com.kapkiai.smpp.pool.PooledSMPPSession;
+import com.kapkiai.smpp.pool.ThrottledSMPPSession;
 import com.kapkiai.smpp.utils.Concatenation;
 import com.kapkiai.smpp.utils.Gsm0338;
 import com.kapkiai.smpp.utils.Ucs2;
@@ -46,13 +49,34 @@ public class SendSms {
 
     private static final int MAX_SINGLE_MSG_CHAR_SIZE_7BIT = 160;
     private static final int MAX_SINGLE_MSG_CHAR_SIZE_UCS2 = 70;
-
+//
     @Autowired
-//    @Qualifier("smscConnection")
     SmppSessionBean smppSessionBean;
 
+    private PooledSMPPSession<ThrottledSMPPSession> pooledSMPPSession;
+
+
     @Async
-    public String sendAndWait(final String smsMessage, final String number, final String senderLabel) throws IOException {
+    public String sendAndWait(final String smsMessage, final String number, final String senderLabel) throws Exception {
+        if (smppSessionBean.getSession().getNumIdle() == 0) {
+            log.warn("There are no idle pooled sessions, borrowObject will trigger new session");
+        }
+        pooledSMPPSession = smppSessionBean.getSession();
+        final ThrottledSMPPSession session = pooledSMPPSession.borrowObject();
+
+
+        if (smppSessionBean.getSession().getNumActive() == 0) {
+            throw new RuntimeException("Active pool sessions should be there after borrowObject");
+        }
+
+        log.debug("Session from pool is {}", session.getSessionId());
+        log.debug("Pool active:{} idle:{} waiters:{}",
+                smppSessionBean.getSession().getNumActive(), smppSessionBean.getSession().getNumIdle(), smppSessionBean.getSession().getNumWaiters());
+
+        // Let's see if the RateLimiter has some spare room
+        double acquired = session.acquire();
+        log.debug("Acquired in {}ms", acquired * 1000L);
+
 
         // Use messageClass null to set a default message class
         MessageClass messageClass = MessageClass.CLASS1;
@@ -99,7 +123,7 @@ public class SendSms {
         // submit all messages
         if (messages != null) {
             for (byte[] message : messages) {
-                MessageId = submitMessage(smppSessionBean.getSession(), message, senderLabel, number,
+                MessageId = submitMessage(session, message, senderLabel, number,
                         dataCoding, esmClass);
                 GlbMsgId.append(MessageId).append(",");
                 //  log.info("Message submitted, message_id is {}", MessageId);
@@ -109,7 +133,7 @@ public class SendSms {
         return GlbMsgId.toString();
     }
 
-    public String[] submitLongSMS(String MSISDN, String senderAddr, String message) {
+    public String[] submitLongSMS(SMPPSession session, String MSISDN, String senderAddr, String message) {
 
         String[] msgId;
         int splitSize = 135;
@@ -138,12 +162,12 @@ public class SendSms {
             OptionalParameter sarSegmentSeqnum = OptionalParameters.newSarSegmentSeqnum(seqNum);
             try
             {
-                msgId[i] =  smppSessionBean.getSession().submitShortMessage("CMT", TypeOfNumber.UNKNOWN, NumberingPlanIndicator.UNKNOWN,
+                msgId[i] =  session.submitShortMessage("CMT", TypeOfNumber.UNKNOWN, NumberingPlanIndicator.UNKNOWN,
                         "MelroseLabs", TypeOfNumber.UNKNOWN, NumberingPlanIndicator.UNKNOWN, MSISDN, esmClass,
                         (byte) 0, (byte) 1, null, null, new RegisteredDelivery(SMSCDeliveryReceipt.SUCCESS_FAILURE),
                         (byte) 0, dataCoding, (byte) 0, segmentData[i].getBytes(), sarMsgRefNum, sarSegmentSeqnum, sarTotalSegments);
 
-                msgId[i] = smppSessionBean.getSession().submitShortMessage("", TypeOfNumber.UNKNOWN, NumberingPlanIndicator.UNKNOWN, "MelroseLabs", TypeOfNumber.INTERNATIONAL, NumberingPlanIndicator.UNKNOWN, "27827704123", new ESMClass(), (byte)0, (byte)1, null, null, new RegisteredDelivery(SMSCDeliveryReceipt.DEFAULT), (byte)0, new GeneralDataCoding(Alphabet.ALPHA_DEFAULT, MessageClass.CLASS1, false), (byte)0,
+                msgId[i] = session.submitShortMessage("", TypeOfNumber.UNKNOWN, NumberingPlanIndicator.UNKNOWN, "MelroseLabs", TypeOfNumber.INTERNATIONAL, NumberingPlanIndicator.UNKNOWN, "27827704123", new ESMClass(), (byte)0, (byte)1, null, null, new RegisteredDelivery(SMSCDeliveryReceipt.DEFAULT), (byte)0, new GeneralDataCoding(Alphabet.ALPHA_DEFAULT, MessageClass.CLASS1, false), (byte)0,
                         segmentData[i].getBytes(), sarMsgRefNum, sarSegmentSeqnum, sarTotalSegments);
                 System.out.println("Message id  for segment " + seqNum + " out of totalsegment "
                         + totalSegments + "is" + msgId[i]);
@@ -172,9 +196,9 @@ public class SendSms {
         return msgId;
     }
 
-    private String submitMessage(SMPPSession session, byte[] message, String sourceMsisdn, String destinationMsisdn,
-                                 DataCoding dataCoding, ESMClass esmClass) {
-        log.info("Sender Label {}", sourceMsisdn);
+    private String submitMessage(ThrottledSMPPSession session, byte[] message, String sourceMsisdn, String destinationMsisdn,
+                                 DataCoding dataCoding, ESMClass esmClass) throws FailedToSubmitMessageException {
+        log.debug("Sender Label {}", sourceMsisdn);
 
         String result = "";
 
@@ -183,16 +207,14 @@ public class SendSms {
                     sourceMsisdn, TypeOfNumber.UNKNOWN, NumberingPlanIndicator.UNKNOWN, destinationMsisdn, esmClass,
                     (byte) 0, (byte) 1, null, null, new RegisteredDelivery(SMSCDeliveryReceipt.SUCCESS_FAILURE),
                     (byte) 0, dataCoding, (byte) 0, message);
-        } catch (PDUException e) {
-             log.error("Invalid PDU parameter", e);
-        } catch (ResponseTimeoutException e) {
-            log.error("Response timeout", e);
-        } catch (InvalidResponseException e) {
-             log.error("Receive invalid response", e);
-        } catch (NegativeResponseException e) {
-             log.error("Receive negative response", e);
-        } catch (IOException e) {
-             log.error("I/O error occurred", e);
+            log.debug("release for throttle and return bound session to pool");
+
+            session.release();
+            pooledSMPPSession.returnObject(session);
+
+        } catch (PDUException | ResponseTimeoutException | InvalidResponseException | NegativeResponseException | IOException e) {
+             log.error("Failed to submit Message due to {}", e.getMessage());
+             throw new FailedToSubmitMessageException(e.getMessage(), e);
         }
         return result;
     }

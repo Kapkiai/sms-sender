@@ -12,7 +12,7 @@ public class LoggingConfig {
         final CommonsRequestLoggingFilter loggingFilter = new CommonsRequestLoggingFilter();
         loggingFilter.setIncludeClientInfo(true);
         loggingFilter.setIncludeQueryString(true);
-        loggingFilter.setIncludePayload(true);
+        loggingFilter.setIncludePayload(false);
         loggingFilter.setMaxPayloadLength(32768);
         return loggingFilter;
     }
